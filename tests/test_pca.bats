@@ -171,9 +171,10 @@ load model_setup_helper
 @test "nmf (categories)" {
     run ${BATS_TEST_DIRNAME}/../bin/pca \
         --workdir ${WORKDIR_PATH} \
-        train \
+        train-nmf \
         --n-components 6 \
-        --model-type NMF
+        --beta-loss frobenius \
+        --solver cd
 
     [ "$status" -eq 0 ]
     [ -e "${WORKDIR_PATH}/models/pca.pkl" ]

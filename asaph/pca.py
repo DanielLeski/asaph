@@ -57,13 +57,8 @@ def train(args):
 
     features = read_features(workdir)
 
-    if args.model_type == "PCA":
-        pca = PCA(n_components = args.n_components,
-                  whiten = True)
-    elif args.model_type == "NMF":
-        pca = NMF(n_components = args.n_components)
-    else:
-        raise Exception("Unknown model type %s" % args.model_type)
+    pca = PCA(n_components = args.n_components,
+              whiten = True)
         
     projections = pca.fit_transform(features.feature_matrix)
 
@@ -75,6 +70,33 @@ def train(args):
     joblib.dump(model,
                 model_fl)
 
+def train_nmf(args):
+    workdir = args.workdir
+
+    models_dir = os.path.join(workdir,
+                              "models")
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+
+    features = read_features(workdir)
+
+    nmf = NMF(n_components = args.n_components,
+              solver = args.solver,
+              beta_loss = args.beta_loss)
+    projections = nmf.fit_transform(features.feature_matrix)
+
+    print "Reconstruction error:", nmf.reconstruction_err_
+    print "Number of iterations:", nmf.n_iter_
+
+    model = { MODEL_KEY : nmf,
+              PROJECTION_KEY : projections}
+
+    model_fl = os.path.join(models_dir,
+                            "pca.pkl")
+    joblib.dump(model,
+                model_fl)
+
+    
 def explained_variance_analysis(args):
     workdir = args.workdir
 
@@ -561,12 +583,28 @@ def parseargs():
                               required=True,
                               help="Number of PCs to compute")
 
-    train_parser.add_argument("--model-type",
-                              type=str,
-                              choices=["PCA",
-                                       "NMF"],
-                              default="PCA")
+    train_nmf_parser = subparsers.add_parser("train-nmf",
+                                             help="Train NMF model")
+    
+    train_nmf_parser.add_argument("--n-components",
+                                  type=int,
+                                  required=True,
+                                  help="Number of PCs to compute")
 
+    train_nmf_parser.add_argument("--beta-loss",
+                                  type=str,
+                                  required=True,
+                                  choices=["frobenius",
+                                          "kullback-leibler"],
+                                  help="Choose loss function. Only used with mu solver.")
+
+    train_nmf_parser.add_argument("--solver",
+                                  type=str,
+                                  required=True,
+                                  choices=["mu",
+                                           "cd"],
+                                  help="Choose solver.")
+    
     
     eva_parser = subparsers.add_parser("explained-variance-analysis",
                                        help="Compute explained variances of PCs")
@@ -664,6 +702,8 @@ if __name__ == "__main__":
 
     if args.mode == "train":
        train(args) 
+    elif args.mode == "train-nmf":
+       train_nmf(args) 
     elif args.mode == "explained-variance-analysis":
         explained_variance_analysis(args)
     elif args.mode == "plot-projections":
