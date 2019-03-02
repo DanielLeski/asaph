@@ -43,6 +43,7 @@ from asaph.newioutils import read_features
 from asaph.newioutils import deserialize
 from asaph.newioutils import PROJECT_SUMMARY_FLNAME
 
+import warnings
 
 MODEL_KEY = "model"
 PROJECTION_KEY = "projected-coordinates"
@@ -717,10 +718,12 @@ if __name__ == "__main__":
     elif args.mode == "pop-association-tests":
         pop_association_tests(args)
     elif args.mode == "snp-association-tests":
-        if args.model_type == "linear":
-            snp_linreg_association_tests(args)
-        elif args.model_type == "logistic":
-            snp_logreg_association_tests(args)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if args.model_type == "linear":
+                snp_linreg_association_tests(args)
+            elif args.model_type == "logistic":
+                snp_logreg_association_tests(args)
     elif args.mode == "sweep-clusters":
         sweep_clusters(args)
     elif args.mode == "cluster-samples":
