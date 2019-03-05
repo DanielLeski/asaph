@@ -46,3 +46,13 @@ $ for i in 2L 2R X 3R 3L;
                                --plot-fl <workdir>/figures/manhattan_pc_1_${i}.png
     done
 ```
+
+# Association Tests Between Components and Labels
+If you want to test whether a given component captures an expected variable, you can use an association tests.
+
+```
+python assoc_tests.py --labels <labels> \
+                      --sample-id <sample-id-column> \
+                      --columns <columns to check> \
+                      --coordinates <coordinates>
+```
