@@ -71,6 +71,44 @@ def train(args):
     joblib.dump(model,
                 model_fl)
 
+def sweep_nmf(args):
+    workdir = args.workdir
+
+    figures_dir = os.path.join(workdir, "figures")
+    if not os.path.exists(figures_dir):
+        os.makedirs(figures_dir)
+
+    features = read_features(workdir)
+
+    errors = []
+    for k in args.n_components:
+        nmf = NMF(n_components = k,
+                  solver = args.solver,
+                  beta_loss = args.beta_loss,
+                  max_iter=1000)
+
+        nmf.fit(features.feature_matrix)
+
+        errors.append(nmf.reconstruction_err_)
+
+        print "Number of components:", k
+        print "Reconstruction error:", nmf.reconstruction_err_
+        print "Number of iterations:", nmf.n_iter_
+        print
+
+    plt.plot(args.n_components,
+             errors,
+             "k.-")
+    plt.xlabel("Number of Components", fontsize=16)
+    plt.ylabel("Reconstruction Error", fontsize=16)
+
+    fig_flname = os.path.join(figures_dir,
+                              "nmf_recon_error.png")
+
+    plt.savefig(fig_flname,
+                DPI=300)
+
+
 def train_nmf(args):
     workdir = args.workdir
 
@@ -83,7 +121,9 @@ def train_nmf(args):
 
     nmf = NMF(n_components = args.n_components,
               solver = args.solver,
-              beta_loss = args.beta_loss)
+              beta_loss = args.beta_loss,
+              max_iter=500)
+
     projections = nmf.fit_transform(features.feature_matrix)
 
     print "Reconstruction error:", nmf.reconstruction_err_
@@ -605,7 +645,29 @@ def parseargs():
                                   choices=["mu",
                                            "cd"],
                                   help="Choose solver.")
+
+    sweep_nmf_parser = subparsers.add_parser("sweep-nmf",
+                                             help="Sweep components of NMF model")
     
+    sweep_nmf_parser.add_argument("--n-components",
+                                  type=int,
+                                  required=True,
+                                  nargs="+",
+                                  help="Number of PCs to compute")
+
+    sweep_nmf_parser.add_argument("--beta-loss",
+                                  type=str,
+                                  required=True,
+                                  choices=["frobenius",
+                                          "kullback-leibler"],
+                                  help="Choose loss function. Only used with mu solver.")
+
+    sweep_nmf_parser.add_argument("--solver",
+                                  type=str,
+                                  required=True,
+                                  choices=["mu",
+                                           "cd"],
+                                  help="Choose solver.")
     
     eva_parser = subparsers.add_parser("explained-variance-analysis",
                                        help="Compute explained variances of PCs")
@@ -701,33 +763,36 @@ def parseargs():
 if __name__ == "__main__":
     args = parseargs()
 
-    if args.mode == "train":
-       train(args) 
-    elif args.mode == "train-nmf":
-       train_nmf(args) 
-    elif args.mode == "explained-variance-analysis":
-        explained_variance_analysis(args)
-    elif args.mode == "plot-projections":
-        plot_projections(args)
-    elif args.mode == "output-coordinates":
-        output_coordinates(args)
-    elif args.mode == "output-loading-magnitudes":
-        output_loading_magnitudes(args)
-    elif args.mode == "output-loading-factors":
-        output_loading_factors(args)
-    elif args.mode == "pop-association-tests":
-        pop_association_tests(args)
-    elif args.mode == "snp-association-tests":
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+        if args.mode == "train":
+            train(args)
+        elif args.mode == "sweep-nmf":
+            sweep_nmf(args)
+        elif args.mode == "train-nmf":
+            train_nmf(args)
+        elif args.mode == "explained-variance-analysis":
+            explained_variance_analysis(args)
+        elif args.mode == "plot-projections":
+            plot_projections(args)
+        elif args.mode == "output-coordinates":
+            output_coordinates(args)
+        elif args.mode == "output-loading-magnitudes":
+            output_loading_magnitudes(args)
+        elif args.mode == "output-loading-factors":
+            output_loading_factors(args)
+        elif args.mode == "pop-association-tests":
+            pop_association_tests(args)
+        elif args.mode == "snp-association-tests":
             if args.model_type == "linear":
                 snp_linreg_association_tests(args)
             elif args.model_type == "logistic":
                 snp_logreg_association_tests(args)
-    elif args.mode == "sweep-clusters":
-        sweep_clusters(args)
-    elif args.mode == "cluster-samples":
-        cluster_samples(args)
-    else:
-        print "Unknown mode '%s'" % args.mode
-        sys.exit(1)
+        elif args.mode == "sweep-clusters":
+            sweep_clusters(args)
+        elif args.mode == "cluster-samples":
+            cluster_samples(args)
+        else:
+            print "Unknown mode '%s'" % args.mode
+            sys.exit(1)
